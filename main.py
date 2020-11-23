@@ -1,8 +1,9 @@
 from flask import Flask
-from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with
+from flask_restful import Api, Resource, abort, fields, marshal_with
 from flask_sqlalchemy import SQLAlchemy
 
 from enumerations import *
+from requestparsers import *
 
 app = Flask(__name__)
 api = Api(app)
@@ -14,7 +15,7 @@ db = SQLAlchemy(app)
 
 class Household(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
-	individuals = db.relationship("Individual", backref="household")
+	individuals = db.relationship('Individual', backref='household')
 	housingtype = db.Column(db.Enum(HousingType), nullable=False)
 
 	def __repr__(self):
@@ -25,60 +26,13 @@ class Individual(db.Model):
 	name = db.Column(db.String(100), nullable=False)
 	gender = db.Column(db.Enum(Gender), nullable=False)
 	maritalstatus = db.Column(db.Enum(MaritalStatus), nullable=False)
-	spouse = db.relationship("Individual", backref="spouse")
+	spouse = db.relationship('Individual', backref='spouse')
 	occupationtype = db.Column(db.Enum(OccupationType), nullable=False)
 	annualincome = db.Column(db.Integer, nullable=False)
 	dateofbirth = db.Column(db.Date, nullable=False)
 
 	def __repr__(self):
 		return
-
-# Set up request parsers for household and individual post/ put/ patch requests
-
-household_post_args = reqparse.RequestParser()
-household_post_args.add_argument("id", type=int, required=True) # help
-household_post_args.add_argument("individuals", type=list)
-household_post_args.add_argument("housingtype", type=str, required=True)
-
-household_put_args = reqparse.RequestParser()
-household_put_args.add_argument("id", type=int, required=True)
-household_put_args.add_argument("individuals", type=list)
-household_put_args.add_argument("housingtype", type=str, required=True)
-
-household_patch_args = reqparse.RequestParser()
-household_patch_args.add_argument("id", type=int, required=True)
-household_patch_args.add_argument("individuals", type=list)
-household_patch_args.add_argument("housingtype", type=str)
-
-individual_post_args = reqparse.RequestParser()
-individual_post_args.add_argument("nric", type=str, required=True) # help
-individual_post_args.add_argument("name", type=str, required=True)
-individual_post_args.add_argument("gender", type=str, required=True)
-individual_post_args.add_argument("maritalstatus", type=str, required=True)
-individual_post_args.add_argument("spouse", type=str)
-individual_post_args.add_argument("occupationtype", type=str, required=True)
-individual_post_args.add_argument("annualincome", type=int, required=True)
-individual_post_args.add_argument("dateofbirth", type=str, required=True)
-
-individual_put_args = reqparse.RequestParser()
-individual_put_args.add_argument("nric", type=str, required=True)
-individual_put_args.add_argument("name", type=str, required=True)
-individual_put_args.add_argument("gender", type=str, required=True)
-individual_put_args.add_argument("maritalstatus", type=str, required=True)
-individual_put_args.add_argument("spouse", type=str)
-individual_put_args.add_argument("occupationtype", type=str, required=True)
-individual_put_args.add_argument("annualincome", type=int, required=True)
-individual_put_args.add_argument("dateofbirth", type=str, required=True)
-
-individual_patch_args = reqparse.RequestParser()
-individual_patch_args.add_argument("nric", type=str, required=True)
-individual_patch_args.add_argument("name", type=str)
-individual_patch_args.add_argument("gender", type=str)
-individual_patch_args.add_argument("maritalstatus", type=str)
-individual_patch_args.add_argument("spouse", type=str)
-individual_patch_args.add_argument("occupationtype", type=str)
-individual_patch_args.add_argument("annualincome", type=int)
-individual_patch_args.add_argument("dateofbirth", type=str)
 
 # Set up resource fields for household and individual, to format how household/ individual resource data is rendered in response
 
@@ -110,14 +64,17 @@ class HouseholdResource(Resource):
 
 	@marshal_with(household_resource_fields)
 	def post(self, path):
-		return	
+		args = household_post_args.parse_args(strict=True)
+		return
 
 	@marshal_with(household_resource_fields)
 	def put(self, path):
+		args = household_put_args.parse_args(strict=True)
 		return
 
 	@marshal_with(household_resource_fields)
 	def patch(self, path):
+		args = household_patch_args.parse_args(strict=True)
 		return	
 	
 	@marshal_with(household_resource_fields)
@@ -125,28 +82,31 @@ class HouseholdResource(Resource):
 		return
 
 class IndividualResource(Resource):
-	@marshal_with(household_resource_fields)
+	@marshal_with(individual_resource_fields)
 	def get(self, path):
 		return
 
-	@marshal_with(household_resource_fields)
+	@marshal_with(individual_resource_fields)
 	def post(self, path):
+		args = individual_post_args.parse_args(strict=True)
 		return	
 
-	@marshal_with(household_resource_fields)
+	@marshal_with(individual_resource_fields)
 	def put(self, path):
+		args = individual_put_args.parse_args(strict=True)
 		return
 
-	@marshal_with(household_resource_fields)
+	@marshal_with(individual_resource_fields)
 	def patch(self, path):
+		args = individual_patch_args.parse_args(strict=True)
 		return	
 	
-	@marshal_with(household_resource_fields)
+	@marshal_with(individual_resource_fields)
 	def delete(self, path):
 		return
 
-api.add_resource(HouseholdResource, "/households/<string:path>")
-api.add_resource(IndividualResource, "/individuals/<string:path>")
+api.add_resource(HouseholdResource, '/households/<string:path>')
+api.add_resource(IndividualResource, '/individuals/<string:path>')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 	app.run(debug=True)
