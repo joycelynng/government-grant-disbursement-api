@@ -17,14 +17,14 @@ db = SQLAlchemy(app)
 
 # Define household and individual database tables/ schema
 
-# class Household(db.Model):
-# 	__tablename__ = 'household'
-# 	id = db.Column(db.Integer, primary_key=True)
-# 	individuals = db.relationship('Individual', backref='household')
-# 	housing_type = db.Column(db.Enum(HousingType), nullable=False)
+class Household(db.Model):
+	__tablename__ = 'household'
+	id = db.Column(db.Integer, primary_key=True)
+	individuals = db.relationship('Individual', backref='household')
+	housing_type = db.Column(db.Enum(HousingType), nullable=False)
 
-# 	def __repr__(self):
-# 		return
+	def __repr__(self):
+		return
 
 class Individual(db.Model):
 	__tablename__ = 'individual'
@@ -38,7 +38,7 @@ class Individual(db.Model):
 	date_of_birth = db.Column(db.Date, nullable=False)
 
 	spouse_nric = db.Column(db.String, db.ForeignKey('individual.nric'))
-	# household_id = db.Column(db.Integer, db.ForeignKey('household.id'))
+	household_id = db.Column(db.Integer, db.ForeignKey('household.id'))
 
 	def __repr__(self):
 		return
@@ -73,67 +73,96 @@ individual_resource_fields = {
 	'date_of_birth': fields.DateTime(dt_format='iso8601')
 }
 
-# household_resource_fields = {
-# 	'id': fields.Integer,
-# 	'individuals': fields.List(fields.Nested(individual_resource_fields, allow_null=True)),
-# 	'housing_type': fields.String
-# }
+household_resource_fields = {
+	'id': fields.Integer,
+	'individuals': fields.List(fields.Nested(individual_resource_fields, allow_null=True)),
+	'housing_type': fields.String
+}
 
 # Define household and individual resources and corresponding get/ post/ put/ patch/ delete methods
 
-# class HouseholdResource(Resource):
-# 	@marshal_with(household_resource_fields)
-# 	def get(self):
-# 		args = household_get_args.parse_args(strict=True)
+class HouseholdResource(Resource):
+	@marshal_with(household_resource_fields)
+	def get(self):
+		args = household_get_args.parse_args(strict=True)
 
-# 		if False:
-# 			abort(400) # client error: bad request
+		if not valid_household_args('get', args):
+			abort(400) # client error: bad request
 
-# 		result = Household.query.filter_by(id=id).first()
+		result = Household.query
 
-# 		if result is None:
-# 			abort(404) # client error: not found
-		
-# 		return result, 200 # success: ok
+		if args['id'] is not None:
+			result = result.filter(Household.nric == args['id'])
 
-# 	@marshal_with(household_resource_fields)
-# 	def post(self):
-# 		args = household_post_args.parse_args(strict=True)
+		if args['nric'] is not None:
+			result = result.filter(args['nric'] in Household.individuals)
 
-# 		if False:
-# 			abort(400) # client error: bad request
-		
-# 		household = Household(
-# 			id=args['id'], 
-# 			individuals=args['individuals'], 
-# 			housing_type=args['housingtype']
-# 			)
+		if args['housingtype'] is not None:
+			result = result.filter(Individual.housing_type.value == args['housingtype'])				
 
-# 		db.session.add(household)
-# 		db.session.commit()
+		if result is None:
+			abort(404) # client error: not found
 
-# 		return household, 201 # success: created
+		result = result.all()
 
-# 	@marshal_with(household_resource_fields)
-# 	def put(self):
-# 		args = household_post_args.parse_args(strict=True)
+		# if args['agebelow'] is not None:
+		# 	for household in result:
+		# 		individuals = household.individuals
+		# 		for individual in individuals:
+					
+		# if args['ageabove'] is not None:
 
-# 		return 400 # client error: bad request
-# 		return 200 # success: ok
+		# if args['spouses'] is not None:
 
-# 	@marshal_with(household_resource_fields)
-# 	def patch(self):
-# 		args = household_patch_args.parse_args(strict=True)
-		
-# 		return 400 # client error: bad request
-# 		return 200 # success: ok
+		# if args['householdincomebelow'] is not None:
+
+		# if args['householdincomeabove'] is not None:
+
+		# if args['grant'] is not None:
 	
-# 	@marshal_with(household_resource_fields)
-# 	def delete(self):
-# 		args = household_get_args.parse_args(strict=True)
+		if result is None:
+			abort(404) # client error: not found
+
+		return result, 200 # success: ok
+
+	# @marshal_with(household_resource_fields)
+	# def post(self):
+	# 	args = household_post_args.parse_args(strict=True)
+
+	# 	if not valid_household_args('post', args):
+	# 		abort(400) # client error: bad request
 		
-# 		return 400 # client error: bad request
-# 		return 200 # success: ok
+	# 	household = Household(
+	# 		id=args['id'], 
+	# 		individuals=args['individuals'], 
+	# 		housing_type=args['housingtype']
+	# 		)
+
+	# 	db.session.add(household)
+	# 	db.session.commit()
+
+	# 	return household, 201 # success: created
+
+	@marshal_with(household_resource_fields)
+	def put(self):
+		args = household_post_args.parse_args(strict=True)
+
+		return 400 # client error: bad request
+		return 200 # success: ok
+
+	@marshal_with(household_resource_fields)
+	def patch(self):
+		args = household_patch_args.parse_args(strict=True)
+		
+		return 400 # client error: bad request
+		return 200 # success: ok
+	
+	@marshal_with(household_resource_fields)
+	def delete(self):
+		args = household_get_args.parse_args(strict=True)
+		
+		return 400 # client error: bad request
+		return 200 # success: ok
 
 class IndividualResource(Resource):
 	@marshal_with(individual_resource_fields)
@@ -252,7 +281,7 @@ class IndividualResource(Resource):
 
 # Add household and individual resources to api
 
-# api.add_resource(HouseholdResource, '/households')
+api.add_resource(HouseholdResource, '/households')
 api.add_resource(IndividualResource, '/individuals')
 
 if __name__ == '__main__':
